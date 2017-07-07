@@ -2,15 +2,9 @@ package org.kitteh.vanish.listeners;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.block.Beacon;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.BrewingStand;
 import org.bukkit.block.Chest;
-import org.bukkit.block.Dispenser;
-import org.bukkit.block.Dropper;
-import org.bukkit.block.Furnace;
-import org.bukkit.block.Hopper;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -26,6 +20,7 @@ import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.kitteh.vanish.Settings;
 import org.kitteh.vanish.VanishPerms;
 import org.kitteh.vanish.VanishPlugin;
@@ -85,24 +80,9 @@ public final class ListenPlayerOther implements Listener {
                     }
                     inventory = player.getEnderChest();
                     break;
-                case DISPENSER:
-                    inventory = ((Dispenser) blockState).getInventory();
-                    break;
-                case HOPPER:
-                    inventory = ((Hopper) blockState).getInventory();
-                    break;
-                case DROPPER:
-                    inventory = ((Dropper) blockState).getInventory();
-                    break;
-                case FURNACE:
-                    inventory = ((Furnace) blockState).getInventory();
-                    break;
-                case BREWING_STAND:
-                    inventory = ((BrewingStand) blockState).getInventory();
-                    break;
-                case BEACON:
-                    inventory = ((Beacon) blockState).getInventory();
-                    break;
+            }
+            if (inventory == null && blockState instanceof InventoryHolder) {
+                inventory = ((InventoryHolder) blockState).getInventory();
             }
             if (inventory != null) {
                 event.setCancelled(true);
