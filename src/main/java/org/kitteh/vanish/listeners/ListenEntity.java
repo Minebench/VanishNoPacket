@@ -12,6 +12,7 @@ import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.event.vehicle.VehicleEntityCollisionEvent;
 import org.kitteh.vanish.VanishPerms;
 import org.kitteh.vanish.VanishPlugin;
+import org.spigotmc.event.entity.EntityMountEvent;
 
 public final class ListenEntity implements Listener {
     private final VanishPlugin plugin;
@@ -48,6 +49,13 @@ public final class ListenEntity implements Listener {
             if ((player != null) && this.plugin.getManager().isVanished(player) && VanishPerms.blockOutgoingDamage(player)) {
                 event.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityMount(EntityMountEvent event) {
+        if ((event.getMount() instanceof Player) && this.plugin.getManager().isVanished((Player) event.getMount()) && VanishPerms.canNotPickUp(((Player) event.getMount()))) {
+            event.setCancelled(true);
         }
     }
 
