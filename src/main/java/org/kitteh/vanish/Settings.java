@@ -10,8 +10,10 @@ public final class Settings {
     private static boolean autoFakeJoinSilent;
     private static boolean worldChangeCheck;
     private static int lightningEffectCount;
+    private static boolean soundOnVanish;
+    private static String vanishedActionBarMessage;
 
-    private static final int confVersion = 5; // Tracking config version
+    private static final int confVersion = 6; // Tracking config version
 
     public static boolean getAutoFakeJoinSilent() {
         return Settings.autoFakeJoinSilent;
@@ -35,6 +37,14 @@ public final class Settings {
 
     public static boolean getWorldChangeCheck() {
         return Settings.worldChangeCheck;
+    }
+
+    public static boolean getSoundOnVanish() {
+        return Settings.soundOnVanish;
+    }
+
+    public static String getVanishedActionBarMessage() {
+        return vanishedActionBarMessage;
     }
 
     static void freshStart(VanishPlugin plugin) {
@@ -64,6 +74,10 @@ public final class Settings {
             if ((ver <= 4)) {
                 config.set("colornametags", true);
             }
+            if ((ver <= 5)) {
+                config.set("soundOnVanish", true);
+                config.set("vanishedactionbarmessage", "&&3&&lYou are vanished!");
+            }
             config.set("configVersionDoNotTouch.SeriouslyThisWillEraseYourConfig", Settings.confVersion);
             plugin.saveConfig();
         }
@@ -76,6 +90,8 @@ public final class Settings {
         if (Settings.lightningEffectCount < 1) {
             Settings.lightningEffectCount = 1;
         }
+        Settings.soundOnVanish = config.getBoolean("soundOnVanish", true);
+        Settings.vanishedActionBarMessage = config.getString("vanishedactionbarmessage", "&&3&&lYou are vanished!").replace("&&", String.valueOf(ChatColor.COLOR_CHAR));
         if (config.getBoolean("debug", false)) {
             Debuggle.itsGoTime(plugin);
         } else {

@@ -18,20 +18,10 @@ public final class ListenServerPing implements Listener {
 
     @EventHandler
     public void ping(ServerListPingEvent event) {
-        if (!(event instanceof Iterable)) {
-            return; // Pre-API server
-        }
         final Set<String> invisibles = this.manager.getVanishedPlayers();
-        final Iterator<Player> players;
-        try {
-            players = event.iterator();
-        } catch (final UnsupportedOperationException e) {
-            return;
-            // NOOP
-        }
-        Player player;
+        final Iterator<Player> players = event.iterator();
         while (players.hasNext()) {
-            player = players.next();
+            Player player = players.next();
             if (invisibles.contains(player.getName())) {
                 players.remove();
             }

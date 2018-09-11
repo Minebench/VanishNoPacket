@@ -1,17 +1,23 @@
 package org.kitteh.vanish;
 
 import com.google.common.collect.ImmutableSet;
+
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Effect;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.kitteh.vanish.event.VanishStatusChangeEvent;
-import org.kitteh.vanish.metrics.MetricsOverlord;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,6 +69,8 @@ public final class VanishManager {
         }
     }
 
+    public static final String VANISH_PLUGIN_CHANNEL = "vanishnopacket:status";
+
     private final VanishPlugin plugin;
     private final Set<String> vanishedPlayerNames = Collections.synchronizedSet(new HashSet<String>());
     private final Map<String, Boolean> sleepIgnored = new HashMap<String, Boolean>();
@@ -76,15 +84,15 @@ public final class VanishManager {
         this.announceManipulator = new VanishAnnounceManipulator(this.plugin);
         this.plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, this.showPlayer, 4, 4);
 
-        this.plugin.getServer().getMessenger().registerIncomingPluginChannel(this.plugin, "vanishStatus", new PluginMessageListener() {
+        this.plugin.getServer().getMessenger().registerIncomingPluginChannel(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL, new PluginMessageListener() {
             @Override
             public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-                if (channel.equals("vanishStatus") && new String(message).equals("check")) {
-                    player.sendPluginMessage(plugin, "vanishStatus", VanishManager.this.isVanished(player) ? new byte[]{0x01} : new byte[]{0x00});
+                if (channel.equals(VanishManager.VANISH_PLUGIN_CHANNEL) && new String(message).equals("check")) {
+                    player.sendPluginMessage(plugin, VanishManager.VANISH_PLUGIN_CHANNEL, VanishManager.this.isVanished(player) ? new byte[]{0x01} : new byte[]{0x00});
                 }
             }
         });
-        this.plugin.getServer().getMessenger().registerOutgoingPluginChannel(this.plugin, "vanishStatus");
+        this.plugin.getServer().getMessenger().registerOutgoingPluginChannel(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL);
 
     }
 
@@ -238,23 +246,21 @@ public final class VanishManager {
             this.setSleepingIgnored(vanishingPlayer);
             if (VanishPerms.canNotFollow(vanishingPlayer)) {
                 for (final Entity entity : vanishingPlayer.getNearbyEntities(70, 70, 70)) {
-                    if ((entity != null) && (entity instanceof Creature)) {
+                    if (entity instanceof Creature) {
                         final Creature creature = ((Creature) entity);
-                        if ((creature != null) && (creature.getTarget() != null) && creature.getTarget().equals(vanishingPlayer)) {
+                        if ((creature.getTarget() != null) && creature.getTarget().equals(vanishingPlayer)) {
                             creature.setTarget(null);
                         }
                     }
                 }
             }
             this.vanishedPlayerNames.add(vanishingPlayerName);
-            MetricsOverlord.getVanishTracker().increment();
             this.plugin.getLogger().info(vanishingPlayerName + " disappeared.");
             vanishingPlayer.setCollidable(false);
         } else {
             Debuggle.log("It's visible time! " + vanishingPlayer.getName());
             this.resetSleepingIgnored(vanishingPlayer);
             this.removeVanished(vanishingPlayerName);
-            MetricsOverlord.getUnvanishTracker().increment();
             this.plugin.getLogger().info(vanishingPlayerName + " reappeared.");
             vanishingPlayer.setCollidable(true);
         }
@@ -276,8 +282,14 @@ public final class VanishManager {
                 this.effectBats(oneUp);
             }
         }
+        if (Settings.getSoundOnVanish()) {
+            vanishingPlayer.playSound(vanishingPlayer.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 5.0F, 5.0F);
+        }
+        if(Settings.getVanishedActionBarMessage() != null && !Settings.getVanishedActionBarMessage().isEmpty()) {
+            showVanishedActionBar(vanishingPlayer);
+        }
         this.plugin.getServer().getPluginManager().callEvent(new VanishStatusChangeEvent(vanishingPlayer, vanishing));
-        vanishingPlayer.sendPluginMessage(this.plugin, "vanishStatus", vanishing ? new byte[]{0x01} : new byte[]{0x00});
+        vanishingPlayer.sendPluginMessage(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL, vanishing ? new byte[] { 0x01 } : new byte[] { 0x00 });
         final java.util.Collection<? extends Player> playerList = this.plugin.getServer().getOnlinePlayers();
         for (final Player otherPlayer : playerList) {
             if (vanishingPlayer.equals(otherPlayer)) {
@@ -288,21 +300,35 @@ public final class VanishManager {
                 if (!VanishPerms.canSeeAll(otherPlayer)) {
                     if (otherPlayer.canSee(vanishingPlayer)) {
                         Debuggle.log("Hiding " + vanishingPlayer.getName() + " from " + otherPlayer.getName());
-                        otherPlayer.hidePlayer(this.plugin, vanishingPlayer);
+                        otherPlayer.hidePlayer(plugin, vanishingPlayer);
                     }
                 } else {
-                    otherPlayer.hidePlayer(this.plugin, vanishingPlayer);
+                    otherPlayer.hidePlayer(plugin, vanishingPlayer);
                     this.showPlayer.add(new ShowPlayerEntry(otherPlayer, vanishingPlayer));
                 }
             } else {
                 if (VanishPerms.canSeeAll(otherPlayer)) {
-                    otherPlayer.hidePlayer(this.plugin, vanishingPlayer);
+                    otherPlayer.hidePlayer(plugin, vanishingPlayer);
                 }
                 if (!otherPlayer.canSee(vanishingPlayer)) {
                     Debuggle.log("Showing " + vanishingPlayer.getName() + " to " + otherPlayer.getName());
                     this.showPlayer.add(new ShowPlayerEntry(otherPlayer, vanishingPlayer));
                 }
             }
+        }
+    }
+
+    private void showVanishedActionBar(Player vanishingPlayer) {
+        if (Bukkit.getPlayer(vanishingPlayer.getUniqueId()) != null && isVanished(vanishingPlayer)) {
+            vanishingPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(Settings.getVanishedActionBarMessage()));
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    showVanishedActionBar(vanishingPlayer);
+                }
+            }.runTaskLater(plugin, 20);
+        } else {
+            vanishingPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
         }
     }
 
@@ -410,7 +436,7 @@ public final class VanishManager {
     private void hideVanished(Player player) {
         for (final Player otherPlayer : this.plugin.getServer().getOnlinePlayers()) {
             if (!player.equals(otherPlayer) && this.isVanished(otherPlayer) && player.canSee(otherPlayer)) {
-                player.hidePlayer(this.plugin, otherPlayer);
+                player.hidePlayer(plugin, otherPlayer);
             }
         }
     }
@@ -431,7 +457,7 @@ public final class VanishManager {
         for (final Player player : this.plugin.getServer().getOnlinePlayers()) {
             for (final Player player2 : this.plugin.getServer().getOnlinePlayers()) {
                 if ((player != null) && (player2 != null) && !player.equals(player2)) {
-                    player.showPlayer(this.plugin, player2);
+                    player.showPlayer(plugin, player2);
                 }
             }
         }

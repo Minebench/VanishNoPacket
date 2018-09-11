@@ -10,13 +10,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.inventory.Inventory;
@@ -24,7 +24,6 @@ import org.bukkit.inventory.InventoryHolder;
 import org.kitteh.vanish.Settings;
 import org.kitteh.vanish.VanishPerms;
 import org.kitteh.vanish.VanishPlugin;
-import org.kitteh.vanish.metrics.MetricsOverlord;
 
 public final class ListenPlayerOther implements Listener {
     private final VanishPlugin plugin;
@@ -98,7 +97,7 @@ public final class ListenPlayerOther implements Listener {
             event.setCancelled(true);
             return;
         }
-        if ((event.getAction() == Action.PHYSICAL) && (event.getClickedBlock().getType() == Material.SOIL)) {
+        if ((event.getAction() == Action.PHYSICAL) && (event.getClickedBlock().getType() == Material.FARMLAND)) {
             if (this.plugin.getManager().isVanished(player) && VanishPerms.canNotTrample(player)) {
                 event.setCancelled(true);
             }
@@ -106,8 +105,8 @@ public final class ListenPlayerOther implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPlayerPickupItem(PlayerPickupItemEvent event) {
-        if (this.plugin.getManager().isVanished(event.getPlayer()) && VanishPerms.canNotPickUp(event.getPlayer())) {
+    public void onPlayerPickupItem(EntityPickupItemEvent event) {
+        if (event.getEntity() instanceof Player && this.plugin.getManager().isVanished((Player) event.getEntity()) && VanishPerms.canNotPickUp((Player) event.getEntity())) {
             event.setCancelled(true);
         }
     }
@@ -122,7 +121,6 @@ public final class ListenPlayerOther implements Listener {
         this.plugin.hooksQuit(player);
         this.plugin.getManager().getAnnounceManipulator().dropDelayedAnnounce(player.getName());
         if (!this.plugin.getManager().getAnnounceManipulator().playerHasQuit(player.getName()) || VanishPerms.silentQuit(player)) {
-            MetricsOverlord.getQuitInvisTracker().increment();
             event.setQuitMessage(null);
         }
         this.plugin.chestFakeClose(event.getPlayer().getName());

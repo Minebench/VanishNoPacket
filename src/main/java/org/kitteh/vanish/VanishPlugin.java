@@ -1,14 +1,10 @@
 package org.kitteh.vanish;
 
 import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.LazyMetadataValue;
 import org.bukkit.metadata.LazyMetadataValue.CacheStrategy;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 import org.kitteh.vanish.hooks.HookManager;
 import org.kitteh.vanish.hooks.HookManager.HookType;
 import org.kitteh.vanish.listeners.ListenEntity;
@@ -18,93 +14,11 @@ import org.kitteh.vanish.listeners.ListenPlayerMessages;
 import org.kitteh.vanish.listeners.ListenPlayerOther;
 import org.kitteh.vanish.listeners.ListenServerPing;
 import org.kitteh.vanish.listeners.ListenToYourHeart;
-import org.kitteh.vanish.listeners.TagAPIListener;
-import org.kitteh.vanish.metrics.MetricsOverlord;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.HashSet;
 
 public final class VanishPlugin extends JavaPlugin {
-    final class UpdateCheck implements Runnable {
-        private static final String CREDITS = "This updater code is based on the great work of Gravity";
-
-        String getCredits() {
-            return CREDITS;
-        }
-
-        private final VanishPlugin plugin;
-
-        private UpdateCheck(VanishPlugin vanishPlugin) {
-            this.plugin = vanishPlugin;
-        }
-
-        @Override
-        public void run() {
-            final File pluginsFolder = this.plugin.getDataFolder().getParentFile();
-            final File updaterFolder = new File(pluginsFolder, "Updater");
-            final File updaterConfigFile = new File(updaterFolder, "config.yml");
-            String apiKey = null;
-            String latest = null;
-
-            if (updaterFolder.exists()) {
-                if (updaterConfigFile.exists()) {
-                    final YamlConfiguration config = YamlConfiguration.loadConfiguration(updaterConfigFile);
-                    apiKey = config.getString("api-key");
-                }
-            }
-
-            URL url;
-            try {
-                url = new URL("https://api.curseforge.com/servermods/files?projectIds=30949");
-            } catch (final MalformedURLException e) {
-                return;
-            }
-
-            URLConnection conn;
-            IOException exceptional = null;
-            try {
-                conn = url.openConnection();
-
-                conn.setConnectTimeout(5000);
-                if (apiKey != null) {
-                    conn.addRequestProperty("X-API-Key", apiKey);
-                }
-                conn.addRequestProperty("User-Agent", "KittehUpdater (by mbaxter)");
-                conn.setDoOutput(true);
-
-                final BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                final String response = reader.readLine();
-
-                final JSONArray array = (JSONArray) JSONValue.parse(response);
-                if (array.size() == 0) {
-                    return;
-                }
-
-                latest = (String) ((JSONObject) array.get(array.size() - 1)).get("name");
-            } catch (final IOException e) {
-                exceptional = e;
-            }
-            if (latest != null) {
-                this.plugin.latestVersion = latest;
-                if (!("v" + this.plugin.getCurrentVersion()).equals(latest)) {
-                    this.plugin.getLogger().info("Found a different version available: " + latest);
-                    this.plugin.getLogger().info("Check http://www.curse.com/server-mods/minecraft/vanish");
-                    this.plugin.versionDiff = true;
-                }
-            } else {
-                this.plugin.getLogger().info("Error: Could not check if plugin was up to date. Will try later");
-                if (exceptional != null) {
-                    this.plugin.getLogger().info("Exception message: " + exceptional.getMessage());
-                }
-            }
-        }
-    }
 
     private final HashSet<String> haveInventoriesOpen = new HashSet<String>();
     private String latestVersion = null;
@@ -268,9 +182,7 @@ public final class VanishPlugin extends JavaPlugin {
         this.setInstance(this);
 
         final File check = new File(this.getDataFolder(), "config.yml");
-        boolean firstTimeStarting = false;
         if (!check.exists()) {
-            firstTimeStarting = true;
             this.saveDefaultConfig();
             this.reloadConfig();
             if (this.getServer().getPluginManager().isPluginEnabled("Essentials")) {
@@ -282,74 +194,17 @@ public final class VanishPlugin extends JavaPlugin {
 
         Settings.freshStart(this);
 
-        dance:
-        if (this.getConfig().getBoolean("colornametags", true)) {
-            if (this.getServer().getPluginManager().isPluginEnabled("TagAPI")) {
-                try {
-                    Class.forName("org.kitteh.tag.AsyncPlayerReceiveNameTagEvent");
-                } catch (final ClassNotFoundException e) {
-                    this.getLogger().warning("Update to TagAPI 3.0 or later to use name coloring");
-                    break dance;
-                }
-                this.getServer().getPluginManager().registerEvents(new TagAPIListener(this), this);
-                this.getLogger().info("Using color changing features of TagAPI.");
-            } else {
-                this.getLogger().info("Colored nametags enabled, but I couldn't find TagAPI");
-                this.getLogger().info("For awesome colored nametags on vanish, visit");
-                this.getLogger().info("http://dev.bukkit.org/server-mods/tag/ ");
-                this.getLogger().info("and download TagAPI.jar");
-            }
-        }
-
         if (this.getConfig().getBoolean("hooks.essentials", false)) {
             this.hookManager.getHook(HookType.Essentials).onEnable();
         }
-        this.hookManager.getHook(HookType.GeoIPTools).onEnable();
         if (this.getConfig().getBoolean("hooks.dynmap", false)) {
             this.hookManager.getHook(HookType.Dynmap).onEnable();
-        }
-        //if (this.getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
-        //    this.hookManager.getHook(HookType.ProtocolLib).onEnable();
-        //}
-
-        final VanishPlugin self = this;
-        //Post-load stuff
-        this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-            @Override
-            public void run() {
-                if (VanishPlugin.this.getConfig().getBoolean("hooks.JSONAPI", false)) {
-                    VanishPlugin.this.hookManager.getHook(HookType.JSONAPI).onEnable();
-                }
-                MetricsOverlord.init(self);
-            }
-        }, 1);
-
-        if (this.getConfig().getBoolean("hooks.spoutcraft", false)) {
-            this.hookManager.getHook(HookType.SpoutCraft).onEnable();
         }
 
         this.manager = new VanishManager(this);
 
         for (final Player player : this.getServer().getOnlinePlayers()) {
             player.setMetadata("vanished", new LazyMetadataValue(this, CacheStrategy.NEVER_CACHE, new VanishCheck(this.manager, player.getName())));
-        }
-
-        boolean updateCheck = this.getConfig().getBoolean("checkupdates", true);
-        if (firstTimeStarting) {
-            updateCheck = false;
-            this.getLogger().info("This is your first startup (or you wiped your config).");
-            this.getLogger().info("In future startups, VanishNoPacket will check for updates");
-            this.getLogger().info("If you dislike it, disable 'checkupdates' in the config file");
-            this.getLogger().info("Note that this plugin also utilizes PluginMetrics with usage tracking");
-            this.getLogger().info("If you do not want usage tracking (paranoid) disable in that config");
-        }
-
-        if (updateCheck) {
-            if (this.getCurrentVersion().contains("SNAPSHOT") || this.getCurrentVersion().equals("${project.version}") || this.getCurrentVersion().endsWith("unofficial")) {
-                this.getLogger().info("Not a release version. Update check disabled");
-            } else {
-                this.getServer().getScheduler().runTaskTimerAsynchronously(this, new UpdateCheck(this), 40, 432000);
-            }
         }
 
         this.getCommand("vanish").setExecutor(new VanishCommand(this));
