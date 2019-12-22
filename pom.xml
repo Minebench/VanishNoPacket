@@ -77,16 +77,16 @@
         <url>http://nexus.hc.to/content/repositories/pub_releases</url>
     </repository>
     <repository>
-      <id>spigot-repo</id>
-      <url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
+      <id>paper-repo</id>
+      <url>https://papermc.io/repo/repository/maven-snapshots/</url>
       </repository>
   </repositories>
 
   <dependencies>
     <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot-api</artifactId>
-      <version>1.13.1-R0.1-SNAPSHOT</version>
+      <groupId>com.destroystokyo.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <version>1.14.4-R0.1-SNAPSHOT</version>
       <type>jar</type>
       <optional>true</optional>
     </dependency>

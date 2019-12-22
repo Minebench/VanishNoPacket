@@ -74,6 +74,8 @@ public final class VanishManager {
     private final VanishPlugin plugin;
     private final Set<String> vanishedPlayerNames = Collections.synchronizedSet(new HashSet<String>());
     private final Map<String, Boolean> sleepIgnored = new HashMap<String, Boolean>();
+    private final Map<String, Boolean> collideIgnored = new HashMap<>();
+    private final Map<String, Boolean> spawningIgnored = new HashMap<>();
     private final Set<UUID> bats = new HashSet<UUID>();
     private final VanishAnnounceManipulator announceManipulator;
     private final Random random = new Random();
@@ -244,6 +246,8 @@ public final class VanishManager {
         if (vanishing) {
             Debuggle.log("It's invisible time! " + vanishingPlayer.getName());
             this.setSleepingIgnored(vanishingPlayer);
+            this.setSpawningIgnored(vanishingPlayer);
+            this.setCollideIgnored(vanishingPlayer);
             if (VanishPerms.canNotFollow(vanishingPlayer)) {
                 for (final Entity entity : vanishingPlayer.getNearbyEntities(70, 70, 70)) {
                     if (entity instanceof Creature) {
@@ -256,13 +260,13 @@ public final class VanishManager {
             }
             this.vanishedPlayerNames.add(vanishingPlayerName);
             this.plugin.getLogger().info(vanishingPlayerName + " disappeared.");
-            vanishingPlayer.setCollidable(false);
         } else {
             Debuggle.log("It's visible time! " + vanishingPlayer.getName());
             this.resetSleepingIgnored(vanishingPlayer);
+            this.resetSpawningIgnored(vanishingPlayer);
+            this.resetCollideIgnored(vanishingPlayer);
             this.removeVanished(vanishingPlayerName);
             this.plugin.getLogger().info(vanishingPlayerName + " reappeared.");
-            vanishingPlayer.setCollidable(true);
         }
         if (effects) {
             final Location oneUp = vanishingPlayer.getLocation().add(0, 1, 0);
@@ -320,7 +324,7 @@ public final class VanishManager {
 
     private void showVanishedActionBar(Player vanishingPlayer) {
         if (Bukkit.getPlayer(vanishingPlayer.getUniqueId()) != null && isVanished(vanishingPlayer)) {
-            vanishingPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(Settings.getVanishedActionBarMessage()));
+            vanishingPlayer.sendActionBar(Settings.getVanishedActionBarMessage());
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -328,7 +332,7 @@ public final class VanishManager {
                 }
             }.runTaskLater(plugin, 20);
         } else {
-            vanishingPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
+            vanishingPlayer.sendActionBar("");
         }
     }
 
@@ -477,5 +481,31 @@ public final class VanishManager {
             this.sleepIgnored.put(player.getName(), player.isSleepingIgnored());
         }
         player.setSleepingIgnored(true);
+    }
+
+    void resetCollideIgnored(Player player) {
+        if (this.collideIgnored.containsKey(player.getName())) {
+            player.setCollidable(this.collideIgnored.remove(player.getName()));
+        }
+    }
+
+    void setCollideIgnored(Player player) {
+        if (!this.collideIgnored.containsKey(player.getName())) {
+            this.collideIgnored.put(player.getName(), player.isCollidable());
+        }
+        player.setCollidable(false);
+    }
+
+    void resetSpawningIgnored(Player player) {
+        if (this.spawningIgnored.containsKey(player.getName())) {
+            player.setAffectsSpawning(this.spawningIgnored.remove(player.getName()));
+        }
+    }
+
+    void setSpawningIgnored(Player player) {
+        if (!this.spawningIgnored.containsKey(player.getName())) {
+            this.spawningIgnored.put(player.getName(), player.getAffectsSpawning());
+        }
+        player.setAffectsSpawning(false);
     }
 }

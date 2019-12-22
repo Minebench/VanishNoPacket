@@ -1,9 +1,12 @@
 package org.kitteh.vanish.listeners;
 
+import com.destroystokyo.paper.event.entity.PhantomPreSpawnEvent;
+import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -67,6 +70,19 @@ public final class ListenEntity implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
+    public void onProjectileCollide(ProjectileCollideEvent event) {
+        Entity with = event.getCollidedWith();
+        if (!(with instanceof Player)) {
+            return;
+        }
+
+        Player player = (Player) with;
+        if (this.plugin.getManager().isVanished(player) && VanishPerms.canNotFollow(player)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
     public void onVehicleDestroy(VehicleDestroyEvent event) {
         final Entity entity = event.getAttacker();
         if ((entity instanceof Player) && this.plugin.getManager().isVanished((Player) event.getAttacker())) {
@@ -79,6 +95,19 @@ public final class ListenEntity implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onVehicleEntityCollision(VehicleEntityCollisionEvent event) {
         if ((event.getEntity() instanceof Player) && this.plugin.getManager().isVanished((Player) event.getEntity())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onPhantomPreSpawn(PhantomPreSpawnEvent event) {
+        Entity spawner = event.getSpawningEntity();
+        if (!(spawner instanceof Player)) {
+            return;
+        }
+
+        Player player = (Player) spawner;
+        if (this.plugin.getManager().isVanished(player) && VanishPerms.canNotInteract(player)) {
             event.setCancelled(true);
         }
     }
