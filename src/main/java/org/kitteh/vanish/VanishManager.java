@@ -75,6 +75,7 @@ public final class VanishManager {
     private final Set<String> vanishedPlayerNames = Collections.synchronizedSet(new HashSet<String>());
     private final Map<String, Boolean> sleepIgnored = new HashMap<String, Boolean>();
     private final Map<String, Boolean> collideIgnored = new HashMap<>();
+    private final Map<String, Boolean> canCollideIgnored = new HashMap<>();
     private final Map<String, Boolean> spawningIgnored = new HashMap<>();
     private final Set<UUID> bats = new HashSet<UUID>();
     private final VanishAnnounceManipulator announceManipulator;
@@ -248,6 +249,7 @@ public final class VanishManager {
             this.setSleepingIgnored(vanishingPlayer);
             this.setSpawningIgnored(vanishingPlayer);
             this.setCollideIgnored(vanishingPlayer);
+            this.setCanCollideIgnored(vanishingPlayer);
             if (VanishPerms.canNotFollow(vanishingPlayer)) {
                 for (final Entity entity : vanishingPlayer.getNearbyEntities(70, 70, 70)) {
                     if (entity instanceof Creature) {
@@ -265,6 +267,7 @@ public final class VanishManager {
             this.resetSleepingIgnored(vanishingPlayer);
             this.resetSpawningIgnored(vanishingPlayer);
             this.resetCollideIgnored(vanishingPlayer);
+            this.resetCanCollideIgnored(vanishingPlayer);
             this.removeVanished(vanishingPlayerName);
             this.plugin.getLogger().info(vanishingPlayerName + " reappeared.");
         }
@@ -494,6 +497,19 @@ public final class VanishManager {
             this.collideIgnored.put(player.getName(), player.isCollidable());
         }
         player.setCollidable(false);
+    }
+
+    void resetCanCollideIgnored(Player player) {
+        if (this.canCollideIgnored.containsKey(player.getName())) {
+            player.setCanCollide(this.canCollideIgnored.remove(player.getName()));
+        }
+    }
+
+    void setCanCollideIgnored(Player player) {
+        if (!this.canCollideIgnored.containsKey(player.getName())) {
+            this.canCollideIgnored.put(player.getName(), player.canCollide());
+        }
+        player.setCanCollide(false);
     }
 
     void resetSpawningIgnored(Player player) {
