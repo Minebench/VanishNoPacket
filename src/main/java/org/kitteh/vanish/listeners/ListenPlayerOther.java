@@ -1,5 +1,6 @@
 package org.kitteh.vanish.listeners;
 
+import com.destroystokyo.paper.event.entity.PlayerNaturallySpawnCreaturesEvent;
 import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -160,6 +161,13 @@ public final class ListenPlayerOther implements Listener {
     public void onWorldChange(PlayerChangedWorldEvent event) {
         if (Settings.getWorldChangeCheck()) {
             this.plugin.getManager().playerRefresh(event.getPlayer());
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onNaturalSpawn(PlayerNaturallySpawnCreaturesEvent event) {
+        if (this.plugin.getManager().isVanished(event.getPlayer())) {
+            event.setCancelled(true);
         }
     }
 }
