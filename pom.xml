@@ -78,7 +78,7 @@
     </repository>
     <repository>
       <id>paper-repo</id>
-      <url>https://papermc.io/repo/repository/maven-snapshots/</url>
+      <url>https://papermc.io/repo/repository/maven-public/</url>
       </repository>
   </repositories>
 
