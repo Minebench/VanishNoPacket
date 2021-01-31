@@ -1,6 +1,25 @@
+/*
+ * VanishNoPacket
+ * Copyright (C) 2011-2021 Matt Baxter
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package org.kitteh.vanish.staticaccess;
 
 import org.bukkit.entity.Player;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.kitteh.vanish.VanishManager;
 import org.kitteh.vanish.VanishPerms;
 import org.kitteh.vanish.VanishPlugin;
@@ -26,7 +45,7 @@ public final class VanishNoPacket {
      * @deprecated Use the Bukkit API
      */
     @Deprecated
-    public static boolean canSee(Player looking, Player uncertain) throws VanishNotLoadedException {
+    public static boolean canSee(@NonNull Player looking, @NonNull Player uncertain) throws VanishNotLoadedException {
         VanishNoPacket.check();
         return !(VanishNoPacket.instance.getManager().isVanished(uncertain) && !VanishPerms.canSeeAll(looking));
     }
@@ -40,7 +59,7 @@ public final class VanishNoPacket {
      * @deprecated Use the Bukkit API
      */
     @Deprecated
-    public static VanishManager getManager() throws VanishNotLoadedException {
+    public static @NonNull VanishManager getManager() throws VanishNotLoadedException {
         VanishNoPacket.check();
         return VanishNoPacket.instance.getManager();
     }
@@ -54,7 +73,7 @@ public final class VanishNoPacket {
      * @deprecated Use the Bukkit API
      */
     @Deprecated
-    public static VanishPlugin getPlugin() throws VanishNotLoadedException {
+    public static @NonNull VanishPlugin getPlugin() throws VanishNotLoadedException {
         VanishNoPacket.check();
         return VanishNoPacket.instance;
     }
@@ -68,7 +87,7 @@ public final class VanishNoPacket {
      * @deprecated Use the player metadata
      */
     @Deprecated
-    public static boolean isVanished(String name) throws VanishNotLoadedException {
+    public static boolean isVanished(@NonNull String name) throws VanishNotLoadedException {
         VanishNoPacket.check();
         return VanishNoPacket.instance.getManager().isVanished(name);
     }
@@ -93,7 +112,7 @@ public final class VanishNoPacket {
      * @deprecated SERIOUSLY WHAT ARE YOU DOING
      */
     @Deprecated
-    public static void setInstance(VanishPlugin instance) {
+    public static void setInstance(@Nullable VanishPlugin instance) {
         VanishNoPacket.instance = instance;
         VanishNoPacket.mainThread = Thread.currentThread();
     }
@@ -106,7 +125,7 @@ public final class VanishNoPacket {
      * @deprecated Call non-statically, getting the VanishManager via Bukkit
      */
     @Deprecated
-    public static void toggleVanishSilent(Player player) throws VanishNotLoadedException {
+    public static void toggleVanishSilent(@NonNull Player player) throws VanishNotLoadedException {
         VanishNoPacket.check(false);
         VanishNoPacket.instance.getManager().toggleVanishQuiet(player);
     }
@@ -120,7 +139,7 @@ public final class VanishNoPacket {
      * @deprecated Call non-statically, getting the VanishManager via Bukkit
      */
     @Deprecated
-    public static void toggleVanishWithAnnounce(Player player) throws VanishNotLoadedException {
+    public static void toggleVanishWithAnnounce(@NonNull Player player) throws VanishNotLoadedException {
         VanishNoPacket.check(false);
         VanishNoPacket.instance.getManager().toggleVanish(player);
     }

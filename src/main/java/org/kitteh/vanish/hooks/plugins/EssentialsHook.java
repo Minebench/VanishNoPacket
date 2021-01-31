@@ -1,17 +1,34 @@
+/*
+ * VanishNoPacket
+ * Copyright (C) 2011-2021 Matt Baxter
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package org.kitteh.vanish.hooks.plugins;
 
+import com.earth2me.essentials.IEssentials;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.kitteh.vanish.VanishPlugin;
 import org.kitteh.vanish.hooks.Hook;
-
-import com.earth2me.essentials.IEssentials;
 
 public final class EssentialsHook extends Hook {
     private final VanishPlugin plugin;
     private IEssentials essentials;
 
-    public EssentialsHook(VanishPlugin plugin) {
+    public EssentialsHook(@NonNull VanishPlugin plugin) {
         super(plugin);
         this.plugin = plugin;
     }
@@ -39,20 +56,20 @@ public final class EssentialsHook extends Hook {
     }
 
     @Override
-    public void onUnvanish(Player player) {
+    public void onUnvanish(@NonNull Player player) {
         if (player.hasPermission("vanish.hooks.essentials.hide")) {
             this.setHidden(player, false);
         }
     }
 
     @Override
-    public void onVanish(Player player) {
+    public void onVanish(@NonNull Player player) {
         if (player.hasPermission("vanish.hooks.essentials.hide")) {
             this.setHidden(player, true);
         }
     }
 
-    private void setHidden(Player player, boolean hide) {
+    private void setHidden(@NonNull Player player, boolean hide) {
         if (this.essentials != null) {
             this.essentials.getUser(player).setHidden(hide);
         }

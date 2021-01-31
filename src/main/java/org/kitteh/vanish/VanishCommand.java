@@ -1,3 +1,20 @@
+/*
+ * VanishNoPacket
+ * Copyright (C) 2011-2021 Matt Baxter
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package org.kitteh.vanish;
 
 import org.bukkit.ChatColor;
@@ -5,16 +22,17 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public final class VanishCommand implements CommandExecutor {
     private final VanishPlugin plugin;
 
-    public VanishCommand(VanishPlugin plugin) {
+    public VanishCommand(@NonNull VanishPlugin plugin) {
         this.plugin = plugin;
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
         // First, the short aliases
         if (label.length() == 2) {
             if (sender instanceof Player) {
@@ -103,7 +121,7 @@ public final class VanishCommand implements CommandExecutor {
             if (args.length == 1) {
                 final StringBuilder toggleReply = new StringBuilder();
                 if (VanishPerms.canToggleSee(player)) {
-                    toggleReply.append(this.colorize(VanishPerms.canSeeAll(player)) + "see" + ChatColor.DARK_AQUA);
+                    toggleReply.append(this.colorize(VanishPerms.canSeeAll(player))).append("see").append(ChatColor.DARK_AQUA);
                 }
                 if (VanishPerms.canToggleNoPickup(player)) {
                     this.appendList(toggleReply, this.colorize(VanishPerms.canNotPickUp(player)) + "nopickup" + ChatColor.DARK_AQUA);
@@ -132,7 +150,7 @@ public final class VanishCommand implements CommandExecutor {
                 if (toggleReply.length() > 0) {
                     toggleReply.insert(0, ChatColor.DARK_AQUA + "You can toggle: ");
                 } else {
-                    toggleReply.append(ChatColor.DARK_AQUA + "You cannot toggle anything");
+                    toggleReply.append(ChatColor.DARK_AQUA).append("You cannot toggle anything");
                 }
                 player.sendMessage(toggleReply.toString());
             } else {
@@ -147,7 +165,7 @@ public final class VanishCommand implements CommandExecutor {
             if (args.length == 1) {
                 final StringBuilder toggleReply = new StringBuilder();
                 if (VanishPerms.canToggleSmoke(player)) {
-                    toggleReply.append(this.colorize(VanishPerms.canEffectSmoke(player)) + "smoke" + ChatColor.DARK_AQUA);
+                    toggleReply.append(this.colorize(VanishPerms.canEffectSmoke(player))).append("smoke").append(ChatColor.DARK_AQUA);
                 }
                 if (VanishPerms.canToggleEffectExplode(player)) {
                     this.appendList(toggleReply, this.colorize(VanishPerms.canEffectExplode(player)) + "explode" + ChatColor.DARK_AQUA);
@@ -164,7 +182,7 @@ public final class VanishCommand implements CommandExecutor {
                 if (toggleReply.length() > 0) {
                     toggleReply.insert(0, ChatColor.DARK_AQUA + "You can toggle: ");
                 } else {
-                    toggleReply.append(ChatColor.DARK_AQUA + "You cannot toggle any effects");
+                    toggleReply.append(ChatColor.DARK_AQUA).append("You cannot toggle any effects");
                 }
                 player.sendMessage(toggleReply.toString());
             } else {
@@ -258,14 +276,14 @@ public final class VanishCommand implements CommandExecutor {
         return true;
     }
 
-    private void appendList(StringBuilder builder, String string) {
+    private void appendList(@NonNull StringBuilder builder, @NonNull String string) {
         if (builder.length() > 0) {
             builder.append(", ");
         }
         builder.append(string);
     }
 
-    private String colorize(boolean has) {
+    private @NonNull String colorize(boolean has) {
         if (has) {
             return ChatColor.GREEN.toString();
         } else {
@@ -273,11 +291,11 @@ public final class VanishCommand implements CommandExecutor {
         }
     }
 
-    private void denied(CommandSender sender) {
+    private void denied(@NonNull CommandSender sender) {
         sender.sendMessage(ChatColor.AQUA + "[Vanish] " + ChatColor.DARK_AQUA + "Access denied.");
     }
 
-    private void toggle(Player player, String toggle) {
+    private void toggle(@NonNull Player player, @NonNull String toggle) {
         final StringBuilder message = new StringBuilder();
         boolean status = false;
         if (toggle.equalsIgnoreCase("see") && VanishPerms.canToggleSee(player)) {

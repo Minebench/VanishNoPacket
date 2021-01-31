@@ -1,11 +1,11 @@
 name: VanishNoPacket
 main: org.kitteh.vanish.VanishPlugin
 version: '${vnp-version}'
-website: http://kitteh.org
-softdepend: [Essentials,dynmap,JSONAPI,bPermissions,Spout,GeoIPTools,TagAPI,ProtocolLib,Vault]
+website: https://kitteh.org
+softdepend: [Essentials,dynmap,PlaceholderAPI,Vault]
 author: mbaxter
 description: Vanish for the distinguished admin
-dev-url: http://dev.bukkit.org/server-mods/vanish/
+dev-url: https://dev.bukkit.org/projects/vanish
 api-version: 1.13
 commands:
   vanish:

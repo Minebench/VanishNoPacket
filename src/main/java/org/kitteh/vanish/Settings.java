@@ -1,7 +1,25 @@
+/*
+ * VanishNoPacket
+ * Copyright (C) 2011-2021 Matt Baxter
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package org.kitteh.vanish;
 
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public final class Settings {
     private static boolean enablePermTest;
@@ -47,14 +65,13 @@ public final class Settings {
         return vanishedActionBarMessage;
     }
 
-    static void freshStart(VanishPlugin plugin) {
+    static void freshStart(@NonNull VanishPlugin plugin) {
         final FileConfiguration config = plugin.getConfig();
         config.options().copyDefaults(true);
         final int ver = config.getInt("configVersionDoNotTouch.SeriouslyThisWillEraseYourConfig", 0);
         if (ver != Settings.confVersion) {
             plugin.getLogger().info("Attempting to update your configuration. Check to make sure it's ok");
             if (ver < 1) {
-                config.set("hooks.spoutcraft", config.getBoolean("spoutcraft.enable", true));
                 config.set("spoutcraft.enable", null);
                 config.set("spoutcraft", null);
             }
@@ -64,19 +81,19 @@ public final class Settings {
                 config.set("permtest", permtest);
                 config.set("enableColoration", null);
                 config.set("enableTabControl", null);
-                final boolean updates = config.getBoolean("updates.check", true);
                 config.set("updates.check", null);
-                config.set("checkupdates", updates);
             }
             if ((ver <= 3)) {
                 config.set("effects.lightning.count", 30);
             }
-            if ((ver <= 4)) {
-                config.set("colornametags", true);
-            }
-            if ((ver <= 5)) {
+            if (ver <= 5) {
                 config.set("soundOnVanish", true);
                 config.set("vanishedactionbarmessage", "&&3&&lYou are vanished!");
+                config.set("hooks.dynmap", null);
+                config.set("hooks.JSONAPI", null);
+                config.set("hooks.spoutcraft", null);
+                config.set("colornametags", null);
+                config.set("checkupdates", null);
             }
             config.set("configVersionDoNotTouch.SeriouslyThisWillEraseYourConfig", Settings.confVersion);
             plugin.saveConfig();

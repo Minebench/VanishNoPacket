@@ -1,6 +1,24 @@
+/*
+ * VanishNoPacket
+ * Copyright (C) 2011-2021 Matt Baxter
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package org.kitteh.vanish;
 
 import org.bukkit.entity.Player;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public final class VanishUser {
     private boolean seeAll;
@@ -18,7 +36,7 @@ public final class VanishUser {
     private boolean lightning;
     private boolean bats;
 
-    public VanishUser(Player player) {
+    public VanishUser(@NonNull Player player) {
         this.seeAll = player.hasPermission("vanish.see");
         this.noPickup = player.hasPermission("vanish.nopickup");
         this.noFollow = player.hasPermission("vanish.nofollow");

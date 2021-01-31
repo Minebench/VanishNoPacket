@@ -1,21 +1,37 @@
+/*
+ * VanishNoPacket
+ * Copyright (C) 2011-2021 Matt Baxter
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 package org.kitteh.vanish;
 
 import com.google.common.collect.ImmutableSet;
-
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Effect;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.messaging.PluginMessageListener;
+import org.bukkit.persistence.PersistentDataType;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.kitteh.vanish.event.VanishStatusChangeEvent;
 
@@ -28,29 +44,34 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class VanishManager {
-    private final class ShowPlayerEntry {
+    private static final class ShowPlayerEntry {
         private final Player player;
         private final Player target;
 
-        public ShowPlayerEntry(Player player, Player target) {
+        public ShowPlayerEntry(@NonNull Player player, @NonNull Player target) {
             this.player = player;
             this.target = target;
         }
 
-        public Player getPlayer() {
+        public @NonNull Player getPlayer() {
             return this.player;
         }
 
-        public Player getTarget() {
+        public @NonNull Player getTarget() {
             return this.target;
         }
     }
 
-    private final class ShowPlayerHandler implements Runnable {
-        Set<ShowPlayerEntry> entries = new HashSet<ShowPlayerEntry>();
-        Set<ShowPlayerEntry> next = new HashSet<ShowPlayerEntry>();
+    private static final class ShowPlayerHandler implements Runnable {
+        private final VanishPlugin plugin;
+        private final Set<ShowPlayerEntry> entries = new HashSet<>();
+        private final Set<ShowPlayerEntry> next = new HashSet<>();
 
-        public void add(ShowPlayerEntry player) {
+        private ShowPlayerHandler(VanishPlugin plugin) {
+            this.plugin = plugin;
+        }
+
+        public void add(@NonNull ShowPlayerEntry player) {
             this.entries.add(player);
         }
 
@@ -59,8 +80,8 @@ public final class VanishManager {
             for (final ShowPlayerEntry entry : this.next) {
                 final Player player = entry.getPlayer();
                 final Player target = entry.getTarget();
-                if ((player != null) && player.isOnline() && (target != null) && target.isOnline()) {
-                    player.showPlayer(plugin, target);
+                if (player.isOnline() && target.isOnline()) {
+                    player.showPlayer(this.plugin, target);
                 }
             }
             this.next.clear();
@@ -72,47 +93,47 @@ public final class VanishManager {
     public static final String VANISH_PLUGIN_CHANNEL = "vanishnopacket:status";
 
     private final VanishPlugin plugin;
-    private final Set<String> vanishedPlayerNames = Collections.synchronizedSet(new HashSet<String>());
-    private final Map<String, Boolean> sleepIgnored = new HashMap<String, Boolean>();
-    private final Map<String, Boolean> collideIgnored = new HashMap<>();
+    private final Set<String> vanishedPlayerNames = Collections.synchronizedSet(new HashSet<>());
+    private final Map<String, Boolean> sleepIgnored = new HashMap<>();
     private final Map<String, Boolean> spawningIgnored = new HashMap<>();
-    private final Set<UUID> bats = new HashSet<UUID>();
+    private final Set<UUID> bats = new HashSet<>();
     private final VanishAnnounceManipulator announceManipulator;
     private final Random random = new Random();
-    private final ShowPlayerHandler showPlayer = new ShowPlayerHandler();
+    private final ShowPlayerHandler showPlayer;
+    private final NamespacedKey vanishCollideState;
 
-    public VanishManager(final VanishPlugin plugin) {
+    public VanishManager(final @NonNull VanishPlugin plugin) {
         this.plugin = plugin;
+
         this.announceManipulator = new VanishAnnounceManipulator(this.plugin);
+
+        this.showPlayer = new ShowPlayerHandler(this.plugin);
         this.plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, this.showPlayer, 4, 4);
 
-        this.plugin.getServer().getMessenger().registerIncomingPluginChannel(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL, new PluginMessageListener() {
-            @Override
-            public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-                if (channel.equals(VanishManager.VANISH_PLUGIN_CHANNEL) && new String(message).equals("check")) {
-                    player.sendPluginMessage(plugin, VanishManager.VANISH_PLUGIN_CHANNEL, VanishManager.this.isVanished(player) ? new byte[]{0x01} : new byte[]{0x00});
-                }
+        this.vanishCollideState = new NamespacedKey(this.plugin, "collidable");
+
+        this.plugin.getServer().getMessenger().registerIncomingPluginChannel(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL, (channel, player, message) -> {
+            if (channel.equals(VanishManager.VANISH_PLUGIN_CHANNEL) && new String(message).equals("check")) {
+                player.sendPluginMessage(plugin, VanishManager.VANISH_PLUGIN_CHANNEL, VanishManager.this.isVanished(player) ? new byte[]{0x01} : new byte[]{0x00});
             }
         });
         this.plugin.getServer().getMessenger().registerOutgoingPluginChannel(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL);
-
     }
 
     /**
      * Gets the announcement manipulator
-     * Called by JSONAPI
      *
      * @return the Announce Manipulator
      */
-    public VanishAnnounceManipulator getAnnounceManipulator() {
+    public @NonNull VanishAnnounceManipulator getAnnounceManipulator() {
         return this.announceManipulator;
     }
 
-    public Set<UUID> getBats() {
+    public @NonNull Set<UUID> getBats() {
         return this.bats;
     }
 
-    public Set<String> getVanishedPlayers() {
+    public @NonNull Set<String> getVanishedPlayers() {
         return ImmutableSet.copyOf(this.vanishedPlayerNames);
     }
 
@@ -122,7 +143,7 @@ public final class VanishManager {
      * @param player player to query
      * @return true if vanished
      */
-    public boolean isVanished(Player player) {
+    public boolean isVanished(@NonNull Player player) {
         return this.vanishedPlayerNames.contains(player.getName());
     }
 
@@ -132,7 +153,7 @@ public final class VanishManager {
      * @param playerName name of the player to query
      * @return if the named player is currently vanished
      */
-    public boolean isVanished(String playerName) {
+    public boolean isVanished(@NonNull String playerName) {
         final Player player = this.plugin.getServer().getPlayer(playerName);
         if (player != null) {
             Debuggle.log("Testing vanished status of " + player.getName() + ": " + this.isVanished(player));
@@ -157,7 +178,7 @@ public final class VanishManager {
      *
      * @param player the player who has quit
      */
-    public void playerQuit(Player player) {
+    public void playerQuit(@NonNull Player player) {
         Debuggle.log("Quitting: " + player.getName());
         this.resetSleepingIgnored(player);
         VanishPerms.userQuit(player);
@@ -169,7 +190,7 @@ public final class VanishManager {
      *
      * @param player player to refresh
      */
-    public void playerRefresh(Player player) {
+    public void playerRefresh(@NonNull Player player) {
         this.resetSeeing(player);
         if (this.isVanished(player) && !VanishPerms.canVanish(player)) {
             this.toggleVanish(player);
@@ -181,7 +202,7 @@ public final class VanishManager {
      *
      * @param player player to refresh
      */
-    public void resetSeeing(Player player) {
+    public void resetSeeing(@NonNull Player player) {
         Debuggle.log("Resetting visibility on " + player.getName());
         if (VanishPerms.canSeeAll(player)) {
             this.showVanished(player);
@@ -200,7 +221,7 @@ public final class VanishManager {
      *
      * @param togglingPlayer the player disappearing
      */
-    public void toggleVanish(Player togglingPlayer) {
+    public void toggleVanish(@NonNull Player togglingPlayer) {
         this.toggleVanishQuiet(togglingPlayer);
         final String vanishingPlayerName = togglingPlayer.getName();
         final String messageBit;
@@ -227,9 +248,9 @@ public final class VanishManager {
      * Will trigger effects
      * Called by toggleVanish(Player)
      *
-     * @param vanishingPlayer
+     * @param vanishingPlayer vanishing player
      */
-    public void toggleVanishQuiet(Player vanishingPlayer) {
+    public void toggleVanishQuiet(@NonNull Player vanishingPlayer) {
         this.toggleVanishQuiet(vanishingPlayer, true);
     }
 
@@ -237,26 +258,29 @@ public final class VanishManager {
      * Toggles a player's visibility
      * Does not say anything.
      *
-     * @param vanishingPlayer
+     * @param vanishingPlayer vanishing player
      * @param effects if true, trigger effects
      */
-    public void toggleVanishQuiet(Player vanishingPlayer, boolean effects) {
+    public void toggleVanishQuiet(@NonNull Player vanishingPlayer, boolean effects) {
         final boolean vanishing = !this.isVanished(vanishingPlayer);
         final String vanishingPlayerName = vanishingPlayer.getName();
         if (vanishing) {
             Debuggle.log("It's invisible time! " + vanishingPlayer.getName());
             this.setSleepingIgnored(vanishingPlayer);
             this.setSpawningIgnored(vanishingPlayer);
-            this.setCollideIgnored(vanishingPlayer);
             if (VanishPerms.canNotFollow(vanishingPlayer)) {
                 for (final Entity entity : vanishingPlayer.getNearbyEntities(70, 70, 70)) {
                     if (entity instanceof Creature) {
                         final Creature creature = ((Creature) entity);
-                        if ((creature.getTarget() != null) && creature.getTarget().equals(vanishingPlayer)) {
+                        if (creature.getTarget() != null && creature.getTarget().equals(vanishingPlayer)) {
                             creature.setTarget(null);
                         }
                     }
                 }
+            }
+            vanishingPlayer.getPersistentDataContainer().set(this.vanishCollideState, PersistentDataType.BYTE, (byte) (vanishingPlayer.isCollidable() ? 0x01 : 0x00));
+            if (vanishingPlayer.isCollidable()) {
+                vanishingPlayer.setCollidable(false);
             }
             this.vanishedPlayerNames.add(vanishingPlayerName);
             this.plugin.getLogger().info(vanishingPlayerName + " disappeared.");
@@ -264,8 +288,11 @@ public final class VanishManager {
             Debuggle.log("It's visible time! " + vanishingPlayer.getName());
             this.resetSleepingIgnored(vanishingPlayer);
             this.resetSpawningIgnored(vanishingPlayer);
-            this.resetCollideIgnored(vanishingPlayer);
             this.removeVanished(vanishingPlayerName);
+            byte coll = vanishingPlayer.getPersistentDataContainer().getOrDefault(this.vanishCollideState, PersistentDataType.BYTE, (byte) 0x00);
+            if (coll == 0x01) {
+                vanishingPlayer.setCollidable(true);
+            }
             this.plugin.getLogger().info(vanishingPlayerName + " reappeared.");
         }
         if (effects) {
@@ -293,7 +320,7 @@ public final class VanishManager {
             showVanishedActionBar(vanishingPlayer);
         }
         this.plugin.getServer().getPluginManager().callEvent(new VanishStatusChangeEvent(vanishingPlayer, vanishing));
-        vanishingPlayer.sendPluginMessage(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL, vanishing ? new byte[] { 0x01 } : new byte[] { 0x00 });
+        vanishingPlayer.sendPluginMessage(this.plugin, VanishManager.VANISH_PLUGIN_CHANNEL, vanishing ? new byte[]{0x01} : new byte[]{0x00});
         final java.util.Collection<? extends Player> playerList = this.plugin.getServer().getOnlinePlayers();
         for (final Player otherPlayer : playerList) {
             if (vanishingPlayer.equals(otherPlayer)) {
@@ -304,15 +331,15 @@ public final class VanishManager {
                 if (!VanishPerms.canSeeAll(otherPlayer)) {
                     if (otherPlayer.canSee(vanishingPlayer)) {
                         Debuggle.log("Hiding " + vanishingPlayer.getName() + " from " + otherPlayer.getName());
-                        otherPlayer.hidePlayer(plugin, vanishingPlayer);
+                        otherPlayer.hidePlayer(this.plugin, vanishingPlayer);
                     }
                 } else {
-                    otherPlayer.hidePlayer(plugin, vanishingPlayer);
+                    otherPlayer.hidePlayer(this.plugin, vanishingPlayer);
                     this.showPlayer.add(new ShowPlayerEntry(otherPlayer, vanishingPlayer));
                 }
             } else {
                 if (VanishPerms.canSeeAll(otherPlayer)) {
-                    otherPlayer.hidePlayer(plugin, vanishingPlayer);
+                    otherPlayer.hidePlayer(this.plugin, vanishingPlayer);
                 }
                 if (!otherPlayer.canSee(vanishingPlayer)) {
                     Debuggle.log("Showing " + vanishingPlayer.getName() + " to " + otherPlayer.getName());
@@ -344,7 +371,7 @@ public final class VanishManager {
      * @param silent if true, does not say anything
      * @param effects if true, trigger effects
      */
-    public void vanish(Player vanishingPlayer, boolean silent, boolean effects) {
+    public void vanish(@NonNull Player vanishingPlayer, boolean silent, boolean effects) {
         if (this.isVanished(vanishingPlayer)) {
             return;
         }
@@ -363,7 +390,7 @@ public final class VanishManager {
      * @param silent if true, does not say anything
      * @param effects if true, trigger effects
      */
-    public void reveal(Player revealingPlayer, boolean silent, boolean effects) {
+    public void reveal(@NonNull Player revealingPlayer, boolean silent, boolean effects) {
         if (!this.isVanished(revealingPlayer)) {
             return;
         }
@@ -374,22 +401,19 @@ public final class VanishManager {
         }
     }
 
-    private void effectBats(final Location location) {
-        final Set<UUID> batty = new HashSet<UUID>();
+    private void effectBats(final @NonNull Location location) {
+        final Set<UUID> batty = new HashSet<>();
         for (int x = 0; x < 10; x++) {
             batty.add(location.getWorld().spawnEntity(location, EntityType.BAT).getUniqueId());
         }
         this.bats.addAll(batty);
-        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
-            @Override
-            public void run() {
-                VanishManager.this.effectBatsCleanup(location.getWorld(), batty);
-                VanishManager.this.bats.removeAll(batty);
-            }
+        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
+            VanishManager.this.effectBatsCleanup(location.getWorld(), batty);
+            VanishManager.this.bats.removeAll(batty);
         }, 3 * 20);
     }
 
-    private void effectBatsCleanup(World world, Set<UUID> bats) {
+    private void effectBatsCleanup(@NonNull World world, @NonNull Set<UUID> bats) {
         for (final Entity entity : world.getEntities()) {
             if (bats.contains(entity.getUniqueId())) {
                 world.playEffect(entity.getLocation(), Effect.SMOKE, this.random.nextInt(9));
@@ -398,18 +422,18 @@ public final class VanishManager {
         }
     }
 
-    private void effectExplosion(Player player) {
+    private void effectExplosion(@NonNull Player player) {
         Location loc = player.getLocation();
         player.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 0F, false, false);
     }
 
-    private void effectFlames(Location location) {
+    private void effectFlames(@NonNull Location location) {
         for (int i = 0; i < 10; i++) {
             location.getWorld().playEffect(location, Effect.MOBSPAWNER_FLAMES, this.random.nextInt(9));
         }
     }
 
-    private void effectLightning(Location location) {
+    private void effectLightning(@NonNull Location location) {
         final int x = location.getBlockX();
         final double y = location.getBlockY();
         final int z = location.getBlockZ();
@@ -431,25 +455,25 @@ public final class VanishManager {
         }
     }
 
-    private void effectSmoke(Location location) {
+    private void effectSmoke(@NonNull Location location) {
         for (int i = 0; i < 10; i++) {
             location.getWorld().playEffect(location, Effect.SMOKE, this.random.nextInt(9));
         }
     }
 
-    private void hideVanished(Player player) {
+    private void hideVanished(@NonNull Player player) {
         for (final Player otherPlayer : this.plugin.getServer().getOnlinePlayers()) {
             if (!player.equals(otherPlayer) && this.isVanished(otherPlayer) && player.canSee(otherPlayer)) {
-                player.hidePlayer(plugin, otherPlayer);
+                player.hidePlayer(this.plugin, otherPlayer);
             }
         }
     }
 
-    private void removeVanished(String name) {
+    private void removeVanished(@NonNull String name) {
         this.vanishedPlayerNames.remove(name);
     }
 
-    private void showVanished(Player player) {
+    private void showVanished(@NonNull Player player) {
         for (final Player otherPlayer : this.plugin.getServer().getOnlinePlayers()) {
             if (this.isVanished(otherPlayer) && !player.canSee(otherPlayer)) {
                 this.showPlayer.add(new ShowPlayerEntry(player, otherPlayer));
@@ -461,7 +485,7 @@ public final class VanishManager {
         for (final Player player : this.plugin.getServer().getOnlinePlayers()) {
             for (final Player player2 : this.plugin.getServer().getOnlinePlayers()) {
                 if ((player != null) && (player2 != null) && !player.equals(player2)) {
-                    player.showPlayer(plugin, player2);
+                    player.showPlayer(this.plugin, player2);
                 }
             }
         }
@@ -470,30 +494,17 @@ public final class VanishManager {
         }
     }
 
-    void resetSleepingIgnored(Player player) {
+    void resetSleepingIgnored(@NonNull Player player) {
         if (this.sleepIgnored.containsKey(player.getName())) {
             player.setSleepingIgnored(this.sleepIgnored.remove(player.getName()));
         }
     }
 
-    void setSleepingIgnored(Player player) {
+    void setSleepingIgnored(@NonNull Player player) {
         if (!this.sleepIgnored.containsKey(player.getName())) {
             this.sleepIgnored.put(player.getName(), player.isSleepingIgnored());
         }
         player.setSleepingIgnored(true);
-    }
-
-    void resetCollideIgnored(Player player) {
-        if (this.collideIgnored.containsKey(player.getName())) {
-            player.setCollidable(this.collideIgnored.remove(player.getName()));
-        }
-    }
-
-    void setCollideIgnored(Player player) {
-        if (!this.collideIgnored.containsKey(player.getName())) {
-            this.collideIgnored.put(player.getName(), player.isCollidable());
-        }
-        player.setCollidable(false);
     }
 
     void resetSpawningIgnored(Player player) {
